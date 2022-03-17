@@ -16,10 +16,9 @@
     <kotlin.code.style>official</kotlin.code.style>
     <kotlin.version>1.6.0</kotlin.version>
     <junit.version>4.13.2</junit.version>
-    <vertx.version>4.2.6</vertx.version>
+    <vertx.version>4.2.5</vertx.version>
     <maven.compiler.source>16</maven.compiler.source>
     <maven.compiler.target>16</maven.compiler.target>
-    <jvm.flags>-Xms:1g -Xmx:1g</jvm.flags>
     <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
   </properties>
 
@@ -43,11 +42,6 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-micrometer-metrics</artifactId>
       <version>${vertx.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>1.7.36</version>
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
@@ -97,7 +91,7 @@
             <image>ibm-semeru-runtimes:open-16-jre</image>
           </from>
           <to>
-            <image>kvdb</image>
+            <image>fin-tcp-proxy</image>
           </to>
           <container>
             <ports>
@@ -106,9 +100,6 @@
             <mainClass>
               dev.aawadia.MainKt
             </mainClass>
-            <jvmFlags>
-              <jvmFlag>${jvm.flags}</jvmFlag>
-            </jvmFlags>
           </container>
         </configuration>
       </plugin>

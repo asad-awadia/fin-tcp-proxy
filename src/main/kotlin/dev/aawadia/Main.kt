@@ -16,6 +16,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.await
 import io.vertx.micrometer.MicrometerMetricsOptions
+import io.vertx.micrometer.backends.BackendRegistries
 
 fun main() {
   val vertx = Vertx.vertx(getVertxOptions())
@@ -23,6 +24,8 @@ fun main() {
 }
 
 class TCPProxy : CoroutineVerticle() {
+  private val registry = BackendRegistries.getDefaultNow() as PrometheusMeterRegistry
+
   override suspend fun start() {
     super.start()
     val netClient = vertx.createNetClient()
@@ -41,8 +44,7 @@ class TCPProxy : CoroutineVerticle() {
       .onSuccess { println("server ready on port ${it.actualPort()}") }
       .onFailure { it.printStackTrace() }
 
-    val prometheusRegistry = getPrometheusRegistry()
-    vertx.createHttpServer().requestHandler { it.response().end(prometheusRegistry.scrape()) }.listen(9091)
+    vertx.createHttpServer().requestHandler { it.response().end(registry.scrape()) }.listen(9091)
   }
 }
 

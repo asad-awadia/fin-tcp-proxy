@@ -12,7 +12,7 @@ import kotlin.test.fail
 class ProxyTest {
   @Test
   fun test() {
-    val vertx = Vertx.vertx()
+    val vertx = Vertx.vertx(getVertxOptions())
     var connected = false
     var msg = ""
     var receivedMsg = ""
