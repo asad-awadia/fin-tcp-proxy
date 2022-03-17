@@ -13,3 +13,7 @@ Set env var for the following configs if need to customize
 3. `listen_port` - port to run the tcp proxy on - default 9090
 
 Prometheus metrics exposed on port 9091
+
+## Docker
+
+`ghcr.io/asad-awadia/fin-tcp-proxy:latest`

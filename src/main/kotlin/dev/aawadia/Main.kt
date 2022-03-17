@@ -21,6 +21,8 @@ import io.vertx.micrometer.backends.BackendRegistries
 fun main() {
   val vertx = Vertx.vertx(getVertxOptions())
   vertx.deployVerticle(TCPProxy::class.java, getDeploymentOptions())
+    .onFailure { it.printStackTrace() }
+    .onSuccess { println("deployed tcp proxy..") }
 }
 
 class TCPProxy : CoroutineVerticle() {
