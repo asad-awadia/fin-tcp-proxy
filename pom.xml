@@ -109,6 +109,9 @@
           </from>
           <to>
             <image>ws-chat</image>
+            <tags>
+              <tag>${tagSha}</tag>
+            </tags>
           </to>
           <container>
             <ports>
