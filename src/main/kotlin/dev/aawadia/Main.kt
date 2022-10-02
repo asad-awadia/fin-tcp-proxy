@@ -13,58 +13,61 @@ import io.vertx.core.DeploymentOptions
 import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
 import io.vertx.core.json.JsonObject
-import io.vertx.kotlin.coroutines.CoroutineVerticle
-import io.vertx.kotlin.coroutines.await
 import io.vertx.micrometer.MicrometerMetricsOptions
-import io.vertx.micrometer.backends.BackendRegistries
+import java.io.File
+import java.util.concurrent.atomic.LongAdder
+import kotlin.concurrent.thread
+
+val messagesTransmitted = LongAdder()
+val connections = LongAdder()
 
 fun main() {
   val vertx = Vertx.vertx(getVertxOptions())
-  vertx.deployVerticle(TCPProxy::class.java, getDeploymentOptions())
+  val chatService = ChatService()
+  vertx.deployVerticle({ ChatServer(chatService) }, getDeploymentOptions())
     .onFailure { it.printStackTrace() }
-    .onSuccess { println("deployed tcp proxy..") }
+    .onSuccess { println("deployed..") }
+
+  miscUtilityWork(vertx)
 }
 
-class TCPProxy : CoroutineVerticle() {
-  private val registry = BackendRegistries.getDefaultNow() as PrometheusMeterRegistry
+fun miscUtilityWork(vertx: Vertx) {
+  val statsFile = File("stats.txt")
+  if (statsFile.exists().not()) statsFile.createNewFile()
+  restoreCounts(statsFile)
+  periodicSaveOfCounts(vertx, statsFile)
+  addShutdownHook(vertx, statsFile)
+}
 
-  override suspend fun start() {
-    super.start()
-    val netClient = vertx.createNetClient()
-    val netServer = vertx.createNetServer()
+fun restoreCounts(statsFile: File) {
+  val text = statsFile.readText()
+  if (text.isEmpty()) return
+  val stats = JsonObject(text)
+  messagesTransmitted.add(stats.getLong("messagesTransmitted", 0))
+}
 
-    val egressSocket =
-      netClient.connect(config.getInteger("forwardPort", 5432), config.getString("forwardHost", "localhost"))
-        .await()
-
-    netServer.connectHandler { ingressSocket ->
-      ingressSocket.pipe().to(egressSocket)
-      egressSocket.pipe().to(ingressSocket)
-    }
-
-    netServer.listen(config.getInteger("listenPort", 9090))
-      .onSuccess { println("server ready on port ${it.actualPort()}") }
-      .onFailure { it.printStackTrace() }
-
-    vertx.createHttpServer().requestHandler { it.response().end(registry.scrape()) }.listen(9091)
+fun periodicSaveOfCounts(vertx: Vertx, statsFile: File) {
+  vertx.setPeriodic(60_000) {
+    val closeStats = JsonObject()
+    closeStats.put("messagesTransmitted", messagesTransmitted.sum())
+    statsFile.writeText(closeStats.encodePrettily())
   }
 }
 
-fun getDeploymentOptions(
-  forwardPort: Int = 5432,
-  forwardHost: String = "localhost",
-  listenPort: Int = 9090,
-  instances: Int = 2 * Runtime.getRuntime().availableProcessors()
-): DeploymentOptions {
+fun addShutdownHook(vertx: Vertx, statsFile: File) {
+  Runtime.getRuntime().addShutdownHook(thread(start = false) {
+    vertx.close()
+    val closeStats = JsonObject()
+    closeStats.put("messagesTransmitted", messagesTransmitted.sum())
+    statsFile.writeText(closeStats.encodePrettily())
+  })
+}
+
+fun getDeploymentOptions(instances: Int = 2 * Runtime.getRuntime().availableProcessors()): DeploymentOptions {
   return DeploymentOptions()
     .setInstances(instances)
     .setWorkerPoolSize(16 * instances)
-    .setConfig(
-      JsonObject()
-        .put("forwardPort", System.getenv("forward_port")?.toIntOrNull() ?: forwardPort)
-        .put("forwardHost", System.getenv("forward_host")?.toString() ?: forwardHost)
-        .put("listenPort", System.getenv("listen_port")?.toIntOrNull() ?: listenPort)
-    )
+    .setConfig(JsonObject().put("key", System.getenv("key") ?: "5194980534"))
 }
 
 fun getPrometheusRegistry(): PrometheusMeterRegistry {
